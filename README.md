@@ -2,6 +2,30 @@
 
 A hardware graphics rendering accelerator implemented in SystemVerilog, designed to explore GPU architecture through RTL design, simulation, and synthesis.
 
+
+## Current Progress
+
+### Completed
+- Established the initial SystemVerilog project structure.
+- Began implementing the rendering controller.
+- Defined the initial frame-level control interface, including clock, reset, start signal, and triangle index tracking.
+
+### In Progress
+- Developing the `render_controller` module to coordinate rendering operations.
+- Defining the control flow and state transitions required to manage the rendering pipeline.
+- Establishing interfaces between the controller and future rendering stages.
+
+### Next Steps
+- Complete the rendering controller FSM.
+- Implement triangle processing and primitive setup.
+- Develop the rasterization logic to determine pixel coverage.
+- Integrate pixel generation and framebuffer output.
+- Create testbenches to verify controller behavior and pipeline operation.
+- Run synthesis and analyze timing and resource utilization.
+
+**Development Status:** Early RTL development. The rendering controller is the first step toward building a complete fixed-function graphics pipeline.
+
+
 ## Overview
 
 This project aims to build a fixed-function graphics accelerator that processes geometric primitives and generates pixel-level rendering data through dedicated hardware stages.
