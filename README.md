@@ -57,11 +57,3 @@ Pipeline stages will be implemented and integrated incrementally as the architec
 - **Version Control:** Git and GitHub
 - **Future Goals:** Logic synthesis, static timing analysis, and FPGA prototyping
 
-## Repository Structure
-
-```text
-Fixed-Function-Graphics-Accelerator/
-├── rtl/             # SystemVerilog hardware modules
-├── tb/              # Testbenches and verification
-├── docs/            # Architecture notes and design documentation
-└── README.md
