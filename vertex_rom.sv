@@ -17,11 +17,10 @@ module vertex_rom #(
     output logic [DATA_WIDTH-1:0] data_out
 );
 
-    // Declare the ROM storage array
+
     // Depth is 2^ADDR_WIDTH, width is DATA_WIDTH
     logic [DATA_WIDTH-1:0] rom [0:(1<<ADDR_WIDTH)-1];
 
-    // Synchronous read (infers Block RAM in FPGAs)
     always_ff @(posedge clk) 
       begin
         if (rd_en) 
