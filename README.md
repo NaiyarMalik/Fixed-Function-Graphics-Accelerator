@@ -8,12 +8,14 @@ A hardware graphics rendering accelerator implemented in SystemVerilog, designed
 | Status | Component | Description |
 |---|---|---|
 | Completed | Render Controller | Implemented the controller responsible for coordinating rendering operations and tracking pipeline progress. |
-| In Progress | Triangle Processing | Developing the next stage to process triangle input data and prepare primitives for rasterization. |
+| Completed | Vertex & Index ROMs | Implemented synchronous memory modules to store 3D model vertices and triangle connectivity data. |
+| Completed | Geometry Fetch Stage | Implemented the sub-sequencer that fetches vertex indices and coordinates from ROMs based on triangle indices. |
+| Completed | Transform Engine & Angle Counter | Implemented rotation angle tracking and full 3D coordinate transformation using fixed-point math and a trigonometric lookup table. |
+| In Progress | Projection Stage | Converting 3D transformed vertex coordinates into 2D screen coordinates. |
 | Future | Rasterization | Determine which pixels are covered by each triangle. |
 | Future | Pixel Generation | Generate pixel coordinates and associated color data. |
 | Future | Framebuffer Interface | Handle rendered pixel output and framebuffer storage. |
 | Future | Verification & Synthesis | Test the integrated pipeline, synthesize the RTL, and analyze timing and hardware utilization. |
-
 
 ## Overview
 
