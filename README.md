@@ -11,11 +11,13 @@ A hardware graphics rendering accelerator implemented in SystemVerilog, designed
 | Completed | Vertex & Index ROMs | Implemented synchronous memory modules to store 3D model vertices and triangle connectivity data. |
 | Completed | Geometry Fetch Stage | Implemented the sub-sequencer that fetches vertex indices and coordinates from ROMs based on triangle indices. |
 | Completed | Transform Engine & Angle Counter | Implemented rotation angle tracking and full 3D coordinate transformation using fixed-point math and a trigonometric lookup table. |
-| In Progress | Projection Stage | Converting 3D transformed vertex coordinates into 2D screen coordinates. |
-| Future | Rasterization | Determine which pixels are covered by each triangle. |
-| Future | Pixel Generation | Generate pixel coordinates and associated color data. |
-| Future | Framebuffer Interface | Handle rendered pixel output and framebuffer storage. |
-| Future | Verification & Synthesis | Test the integrated pipeline, synthesize the RTL, and analyze timing and hardware utilization. |
+| Completed | Projection Stage | Converted 3D transformed vertex coordinates into 2D screen coordinates with preserved depth. |
+| Completed | Triangle Rasterizer | Implemented bounding-box traversal and edge processing to identify covered triangle pixels. |
+| Completed | Pixel Processor | Generated dynamic color shading and gradients based on pixel coordinates and depth. |
+| Completed | Framebuffer Interface | Built dual-port video RAM storage for pixel color writes and display scan reads. |
+| Completed | Display Controller | Implemented screen scanning and synchronization signal output for display interfaces. |
+| Completed | Top-Level Wrapper (`gpu_top.sv`) | Integrated all pipeline modules into a unified system wrapper. |
+| In Progress | Verification & Synthesis | Testing the integrated pipeline in simulation, synthesizing RTL, and tuning timing for physical video interfaces (e.g., VGA timing). |
 
 ## Overview
 
