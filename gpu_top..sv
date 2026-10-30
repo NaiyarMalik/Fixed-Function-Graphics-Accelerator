@@ -3,22 +3,22 @@
     
     Overview:
     GPU Top-Level Wrapper: Integrates the complete modular graphics pipeline 
-    from Geometry Fetch down to the Display Controller and Framebuffer.
+    from Geometry Fetch down to the VGA-compatible Display Controller and Framebuffer.
 */
 
 module gpu_top #(
     parameter int COORD_W  = 16,
     parameter int ANGLE_W  = 16,
-    parameter int SCREEN_X = 9,
-    parameter int SCREEN_Y = 9,
+    parameter int SCREEN_X = 10, // 10 bits for 640 width (0-639)
+    parameter int SCREEN_Y = 9,  // 9 bits for 480 height (0-479)
     parameter int COLOR_W  = 24
 ) (
-    input  logic                  clk,
+    input  logic                  clk,          // System / pipeline clock
+    input  logic                  pixel_clk,    // VGA pixel clock (~25.175 MHz)
     input  logic                  rst_n,
     input  logic                  frame_enable, // Pulses once per frame to trigger angle update
-    input  logic                  pixel_clk_en, // Pixel clock enable for display output
 
-    // Physical Display Outputs
+    // Physical VGA Display Outputs
     output logic                  hsync,
     output logic                  vsync,
     output logic                  data_enable,
@@ -51,7 +51,8 @@ module gpu_top #(
     logic [COORD_W-1:0]    t2_x, t2_y, t2_z;
 
     // Projection outputs
-    logic [SCREEN_X-1:0]   p0_x, p0_y, p1_x, p1_y, p2_x, p2_y;
+    logic [SCREEN_X-1:0]   p0_x, p1_x, p2_x;
+    logic [SCREEN_Y-1:0]   p0_y, p1_y, p2_y;
     logic [COORD_W-1:0]    p0_z, p1_z, p2_z;
 
     // Rasterizer outputs (Pixel stream)
@@ -221,15 +222,12 @@ module gpu_top #(
         .rd_color(fb_rd_color)
     );
 
-    // 11. Display Controller (Scanout & Sync Generation)
+    // 11. VGA Display Controller (Scanout & Sync Generation)
     display_controller #(
-        .SCREEN_X(SCREEN_X),
-        .SCREEN_Y(SCREEN_Y),
         .COLOR_W(COLOR_W)
     ) u_display_controller (
-        .clk(clk),
+        .pixel_clk(pixel_clk),
         .rst_n(rst_n),
-        .pixel_clk_en(pixel_clk_en),
         .rd_x(fb_rd_x),
         .rd_y(fb_rd_y),
         .rd_color(fb_rd_color),
