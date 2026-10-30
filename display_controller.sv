@@ -2,86 +2,113 @@
     By: Naiyar Malik
     
     Overview:
-    Display Controller: Generates screen scanning coordinates and video sync 
-    signals to read pixel color data sequentially from the framebuffer and drive 
-    the physical display interface.
+    VGA Display Controller: Generates standard 640x480 @ 60Hz timing signals 
+    (hsync, vsync, data_enable) and maps active-pixel coordinates to read from the framebuffer.
 */
 
 module display_controller #(
-    parameter int SCREEN_X = 9,  // Screen width bits (0-511)
-    parameter int SCREEN_Y = 9,  // Screen height bits (0-511)
-    parameter int COLOR_W  = 24  // RGB 24-bit color width
+    parameter int COLOR_W = 24
 ) (
-    input  logic                  clk,
+    input  logic                  pixel_clk,    // ~25.175 MHz pixel clock
     input  logic                  rst_n,
-    input  logic                  pixel_clk_en, // Clock enable for pixel tick
 
-    // Interface to Framebuffer
-    output logic [SCREEN_X-1:0]   rd_x,
-    output logic [SCREEN_Y-1:0]   rd_y,
+    // Interface to Framebuffer (640x480 resolution)
+    output logic [9:0]            rd_x,         // 0 to 639 
+    output logic [9:0]            rd_y,         // 0 to 480 
     input  logic [COLOR_W-1:0]    rd_color,
 
-    // Physical Display Outputs
+    // Physical VGA Outputs
     output logic                  hsync,
     output logic                  vsync,
     output logic                  data_enable,
     output logic [COLOR_W-1:0]    rgb_out
 );
 
-    // Scan counters for screen traversal
-    logic [SCREEN_X-1:0] x_count;
-    logic [SCREEN_Y-1:0] y_count;
+    // Standard 640x480 @ 60Hz Timing Constants (in pixel clocks / lines)
+    localparam int H_ACTIVE  = 640;
+    localparam int H_FP      = 16;
+    localparam int H_SYNC    = 96;
+    localparam int H_BP      = 48;
+    localparam int H_TOTAL   = H_ACTIVE + H_FP + H_SYNC + H_BP; // 800
 
-    // Horizontal and vertical screen scanning logic
-    always_ff @(posedge clk or negedge rst_n) 
+    localparam int V_ACTIVE  = 480;
+    localparam int V_FP      = 10;
+    localparam int V_SYNC    = 2;
+    localparam int V_BP      = 33;
+    localparam int V_TOTAL   = V_ACTIVE + V_FP + V_SYNC + V_BP; // 525
+
+    // Scan counters
+    logic [9:0] h_count;
+    logic [9:0] v_count;
+
+    // Horizontal and Vertical scan counter logic
+    always_ff @(posedge pixel_clk or negedge rst_n) 
     begin
         if (!rst_n) 
         begin
-            x_count <= '0;
-            y_count <= '0;
+            h_count <= '0;
+            v_count <= '0;
         end 
-        else if (pixel_clk_en) 
+        else 
         begin
-            if (x_count == (1 << SCREEN_X) - 1) 
+            if (h_count == H_TOTAL - 1) 
             begin
-                x_count <= '0;
-                if (y_count == (1 << SCREEN_Y) - 1) 
+                h_count <= '0;
+                if (v_count == V_TOTAL - 1) 
                 begin
-                    y_count <= '0;
+                    v_count <= '0;
                 end 
                 else 
                 begin
-                    y_count <= y_count + 1'b1;
+                    v_count <= v_count + 1'b1;
                 end
             end 
             else 
             begin
-                x_count <= x_count + 1'b1;
+                h_count <= h_count + 1'b1;
             end
         end
     end
 
-    // Map scan counters directly to framebuffer read addresses
-    assign rd_x = x_count;
-    assign rd_y = y_count;
-
-    // Video timing synchronization and output pipeline
-    always_ff @(posedge clk or negedge rst_n) 
+    // Generate Sync Pulses (Negative polarity for standard 640x480 VGA)
+    always_ff @(posedge pixel_clk or negedge rst_n) 
     begin
         if (!rst_n) 
         begin
-            hsync       <= 1'b0;
-            vsync       <= 1'b0;
-            data_enable <= 1'b0;
-            rgb_out     <= '0;
+            hsync <= 1'b1;
+            vsync <= 1'b1;
         end 
-        else if (pixel_clk_en) 
+        else 
         begin
-            // Active display flags and sync pulses (simplified raster timing)
-            data_enable <= 1'b1; 
-            hsync       <= (x_count == '0); 
-            vsync       <= (y_count == '0 && x_count == '0); 
-            rgb_out     <= rd_color;
+            hsync <= ~((h_count >= (H_ACTIVE + H_FP)) && (h_count < (H_ACTIVE + H_FP + H_SYNC)));
+            vsync <= ~((v_count >= (V_ACTIVE + V_FP)) && (v_count < (V_ACTIVE + V_FP + V_SYNC)));
+        end
+    end
+
+    // Active video display region check
+    assign data_enable = (h_count < H_ACTIVE) && (v_count < V_ACTIVE);
+
+    // Map scan counters to framebuffer read coordinates
+    assign rd_x = data_enable ? h_count : '0;
+    assign rd_y = data_enable ? v_count : '0;
+
+    // Drive output RGB color (outputs black during porch/sync blanking intervals)
+    always_ff @(posedge pixel_clk or negedge rst_n) 
+    begin
+        if (!rst_n) 
+        begin
+            rgb_out <= '0;
+        end 
+        else 
+        begin
+            if (data_enable) 
+            begin
+                rgb_out <= rd_color;
+            end 
+            else 
+            begin
+                rgb_out <= '0; 
+            end
         end
     end
 
