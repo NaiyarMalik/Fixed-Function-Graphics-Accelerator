@@ -1,62 +1,120 @@
+
 /* 
     By: Naiyar Malik
     
     Overview:
-    Framebuffer: Stores the pixel color data for the display. It accepts 
-    incoming shaded pixels from the pixel processor to write into memory, 
-    and provides a read interface for the display controller.
+    Framebuffer: Stores monochrome pixel data.
+    Receives valid white pixels from the pixel processor,
+    provides pixel data to the display controller,
+    and clears the framebuffer before rendering a new frame.
 */
 
 module framebuffer #(
-    parameter int SCREEN_X = 9,  // Screen width bits (0-511 -> 512 width)
-    parameter int SCREEN_Y = 9,  // Screen height bits (0-511 -> 512 height)
-    parameter int COLOR_W  = 24  // RGB 24-bit color width
+    parameter int SCREEN_X = 9,
+    parameter int SCREEN_Y = 9,
+    parameter int COLOR_W  = 1
 ) (
-    input  logic                  clk,
-    input  logic                  rst_n,
+    input logic clk, rst_n,
+
+    // Clear interface from Render Controller
+    input  logic clear_start,
+    output logic clear_done,
 
     // Write interface from Pixel Processor
-    input  logic                  wr_en,
-    input  logic [SCREEN_X-1:0]   wr_x,
-    input  logic [SCREEN_Y-1:0]   wr_y,
-    input  logic [COLOR_W-1:0]    wr_color,
+    input logic wr_en,
+    input logic [SCREEN_X-1:0] wr_x,
+    input logic [SCREEN_Y-1:0] wr_y,
+    input logic [COLOR_W-1:0]  wr_color,
 
     // Read interface for Display Controller
-    input  logic [SCREEN_X-1:0]   rd_x,
-    input  logic [SCREEN_Y-1:0]   rd_y,
-    output logic [COLOR_W-1:0]    rd_color
+    input  logic [SCREEN_X-1:0] rd_x,
+    input  logic [SCREEN_Y-1:0] rd_y,
+    output logic [COLOR_W-1:0]  rd_color
 );
 
-    // Calculate total memory depth (Width * Height pixels)
-    // For 512x512, depth is 262,144 locations
+    // Memory dimensions
     localparam int ADDR_W = SCREEN_X + SCREEN_Y;
-    
-    // Memory array storage (infers RAM/BRAM in synthesis)
-    logic [COLOR_W-1:0] mem [0:(1 << ADDR_W)-1];
+    localparam int DEPTH  = 1 << ADDR_W;
 
-    // Combine 2D coordinates into a linear 1D memory address
-    function automatic logic [ADDR_W-1:0] calc_addr (
-        input logic [SCREEN_X-1:0] x,
-        input logic [SCREEN_Y-1:0] y
-    );
-        begin
-            calc_addr = (y << SCREEN_X) | x;
-        end
-    endfunction
+    // Framebuffer memory
+    logic [COLOR_W-1:0] mem [0:DEPTH-1];
 
-    // Synchronous Write operation
-    always_ff @(posedge clk) 
+    // Read and write addresses
+    logic [ADDR_W-1:0] wr_addr, rd_addr;
+
+    assign wr_addr = {wr_y, wr_x};
+    assign rd_addr = {rd_y, rd_x};
+
+    // Clear FSM
+    typedef enum logic [1:0] {
+        FB_IDLE,
+        FB_CLEAR,
+        FB_DONE
+    } fb_state_t;
+
+    fb_state_t state;
+
+    logic [ADDR_W-1:0] clear_addr;
+
+    // Clear control
+    always_ff @(posedge clk or negedge rst_n)
     begin
-        if (wr_en) 
+        if (!rst_n)
         begin
-            mem[calc_addr(wr_x, wr_y)] <= wr_color;
+            state      <= FB_IDLE;
+            clear_addr <= '0;
+        end
+        else
+        begin
+            case (state)
+
+                FB_IDLE:
+                begin
+                    if (clear_start)
+                    begin
+                        clear_addr <= '0;
+                        state <= FB_CLEAR;
+                    end
+                end
+
+                FB_CLEAR:
+                begin
+                    if (clear_addr == DEPTH - 1)
+                        state <= FB_DONE;
+                    else
+                        clear_addr <= clear_addr + 1'b1;
+                end
+
+                FB_DONE:
+                begin
+                    state <= FB_IDLE;
+                end
+
+                default: state <= FB_IDLE;
+
+            endcase
         end
     end
 
-    // Synchronous Read operation (for display scanning)
-    always_ff @(posedge clk) 
+    assign clear_done = (state == FB_DONE);
+
+    // Synchronous memory write
+    always_ff @(posedge clk)
     begin
-        rd_color <= mem[calc_addr(rd_x, rd_y)];
+        if (rst_n)
+        begin
+            if (state == FB_CLEAR)
+                mem[clear_addr] <= '0;
+
+            else if (state == FB_IDLE && !clear_start && wr_en)
+                mem[wr_addr] <= wr_color;
+        end
+    end
+
+    // Synchronous memory read
+    always_ff @(posedge clk)
+    begin
+        rd_color <= mem[rd_addr];
     end
 
 endmodule
