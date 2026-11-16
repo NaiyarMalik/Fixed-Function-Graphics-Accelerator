@@ -10,7 +10,7 @@
 
 module index_rom #(
     parameter int ADDR_WIDTH = 8,  
-    parameter int DATA_WIDTH = 48 
+    parameter int DATA_WIDTH = 24 
 ) (
     input  logic clk, rd_en,
     input  logic [ADDR_WIDTH-1:0] addr,
